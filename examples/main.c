@@ -2,6 +2,7 @@
 #include <windows.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include "resource.h"
 
 #define APP_CLASS_NAME "ImageShapeWindowClass"
 
@@ -19,6 +20,36 @@ static int LoadBitmapFromFile(const char *path) {
     gBitmapH = bm.bmHeight;
     return 1;
 }
+
+static HRGN ReadRegionFromRCDATAResource(HWND hwnd) {
+
+    HRSRC hResource = FindResource(NULL, MAKEINTRESOURCE(IDR_RCDATA_RGN_01), RT_RCDATA);
+    if (!hResource) {
+        MessageBoxA(hwnd, "Failed to find resource", "MAKEINTRESOURCEW", MB_ICONERROR);
+        return (NULL);
+    }
+
+    HGLOBAL hLoadedResource = LoadResource(NULL, hResource);
+    if (!hLoadedResource) {
+        MessageBoxA(hwnd, "Failed to load resource", "LoadResource", MB_ICONERROR);
+        return (NULL);
+    }
+
+    LPVOID pRawData = LockResource(hLoadedResource);
+    if (!pRawData) {
+        MessageBoxA(hwnd, "Failed to lock resource", "LockResource", MB_ICONERROR);
+        return (NULL);
+    }
+
+    DWORD dataSize = SizeofResource(NULL, hResource);
+    if (dataSize == 0) {
+        MessageBoxA(hwnd, "Resource is empty", "SizeofResource", MB_ICONERROR);
+        return (NULL);
+    }
+
+    return ExtCreateRegion(NULL, dataSize, (RGNDATA*)pRawData);
+}
+
 
 static HRGN ReadRegionFromFile(HWND hwnd, const char *path) {
     HANDLE hFile = CreateFile(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -80,7 +111,15 @@ static HRGN ReadRegionFromFile(HWND hwnd, const char *path) {
 static void ApplyImageShape(HWND hwnd) {
     HRGN region;
     if (!gBitmap) return;
-    region = ReadRegionFromFile(hwnd, "example.rgn");
+
+    // variant a)  read region file at runtime
+    // region = ReadRegionFromFile(hwnd, "example.rgn");
+
+    // variant b)  read region file at compile time and
+    //             store it inside the executable as a
+    //             RCDATA resource "IDR_RCDATA_RGN_01"
+    region = ReadRegionFromRCDATAResource(hwnd);
+
     SetWindowRgn(hwnd, region, TRUE);
 }
 
