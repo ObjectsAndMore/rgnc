@@ -54,5 +54,8 @@ dkms.conf
 # debug information files
 *.dwo
 
+# exceptions
+!examples/example.exe
+
 # other
 Thumbs.db
